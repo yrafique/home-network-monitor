@@ -8,7 +8,7 @@
 ![Grafana](https://img.shields.io/badge/Grafana-11.3-F46800?logo=grafana&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-![Dashboard](docs/screenshots/dashboard-hero.png)
+![Dashboard](docs/screenshots/01-dashboard-overview.png)
 
 ---
 
@@ -114,12 +114,12 @@ GRAFANA_PASSWORD=changeme
 ### Status row
 Live readings: UP/DOWN state, current latency, packet loss, range uptime %, latency min/avg/max. All stat panels respect the time picker — switch from 5 min to 30 days and every number updates.
 
-![Status row](docs/screenshots/status-row.png)
+![Status row](docs/screenshots/02-status-row.png)
 
 ### Latency & packet loss
 Time series per target with mean/min/max in the legend table. The **Connection State Timeline** renders a green/red bar per target — red blocks mark exactly when you lost connectivity.
 
-![Latency panels](docs/screenshots/latency-panels.png)
+![Latency panels](docs/screenshots/03-latency-timeline.png)
 
 ### Per-hop path
 Every hop between you and the target with its own RTT and loss, auto-labelled by reverse-DNS and owner (LAN / Rogers / Google / …).
@@ -138,7 +138,7 @@ Hourly download/upload Mbps plus idle vs loaded latency. The **bufferbloat grade
 | D | 60 – 200 ms |
 | F | > 200 ms |
 
-![Speed](docs/screenshots/panel-speed.png)
+![Speed](docs/screenshots/05-speed-throughput.png)
 
 ### Advanced analytics
 
@@ -150,7 +150,7 @@ Hourly download/upload Mbps plus idle vs loaded latency. The **bufferbloat grade
 
 **Seasonal baseline** — the monitor builds a median latency profile per hour-of-week from ~14 days of history. The dashboard shows actual vs expected, so normal patterns (evening congestion, maintenance windows) aren't flagged — only deviations *from that norm*. Appears after a few days of data.
 
-![Anomaly z-score](docs/screenshots/panel-anomaly.png)
+![Anomaly z-score](docs/screenshots/07-anomaly-zscore.png)
 
 ---
 
@@ -165,7 +165,7 @@ Hourly download/upload Mbps plus idle vs loaded latency. The **bufferbloat grade
 
 Results appear in the **LAN Devices** table in Grafana: IP, MAC, vendor (OUI lookup), mDNS name, open ports, last-seen.
 
-![LAN devices](docs/screenshots/panel-lan-devices.png)
+![LAN devices](docs/screenshots/08-lan-devices.png)
 
 ---
 
