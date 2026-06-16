@@ -10,7 +10,7 @@
 set -euo pipefail
 
 # ── Config ────────────────────────────────────────────────────────────────────
-PI_HOST="${PI_HOST:-pi@homebridge.local}"
+PI_HOST="${PI_HOST:-pi@raspberrypi.local}"
 PI_DIR="${PI_DIR:-/home/pi/home-network-monitor}"
 LOCAL_DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -96,9 +96,10 @@ show_status() {
   else
     ssh "$PI_HOST" "cd '$PI_DIR' && docker compose ps --format 'table {{.Name}}\t{{.Status}}\t{{.Ports}}'" 2>/dev/null
     echo ""
-    log "Grafana: http://homebridge.local:3000"
-    log "Prometheus: http://homebridge.local:9090"
-    log "Metrics: http://homebridge.local:8000/metrics"
+    local host; host=$(echo "$PI_HOST" | cut -d@ -f2)
+    log "Grafana: http://${host}:3000"
+    log "Prometheus: http://${host}:9090"
+    log "Metrics: http://${host}:8000/metrics"
   fi
 }
 

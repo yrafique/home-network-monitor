@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 """
-Compare internet-monitor stats between two vantage points (e.g. Mac vs Pi).
+Compare home-network-monitor stats between two vantage points (e.g. local vs remote).
 
 Queries two Prometheus instances over a time window and prints a side-by-side
 table per ping target: latency min/avg/max, jitter, packet loss, uptime %, the
-number of samples, and outage count. The "Δ" column is Pi minus Mac, so a
-positive latency/loss Δ means the Pi saw worse numbers than the Mac.
+number of samples, and outage count. The "Δ" column is remote minus local, so a
+positive latency/loss Δ means the remote host saw worse numbers than local.
 
 Usage:
-    python3 compare.py [window] [mac_url] [pi_url]
+    python3 compare.py [window] [local_url] [remote_url]
     python3 compare.py 24h
-    python3 compare.py 24h http://localhost:9090 http://homebridge.local:9090
+    python3 compare.py 6h http://localhost:9090 http://pi.local:9090
 
-Defaults: window=24h, Mac=http://localhost:9090, Pi=http://homebridge.local:9090
+Defaults: window=24h, local=http://localhost:9090, remote=http://pi.local:9090
 No third-party deps — uses urllib.
 """
 import json
@@ -21,8 +21,8 @@ import urllib.parse
 import urllib.request
 
 WINDOW = sys.argv[1] if len(sys.argv) > 1 else "24h"
-MAC_URL = sys.argv[2] if len(sys.argv) > 2 else "http://localhost:9090"
-PI_URL = sys.argv[3] if len(sys.argv) > 3 else "http://homebridge.local:9090"
+LOCAL_URL = sys.argv[2] if len(sys.argv) > 2 else "http://localhost:9090"
+REMOTE_URL = sys.argv[3] if len(sys.argv) > 3 else "http://pi.local:9090"
 
 
 def q(base_url: str, expr: str):
@@ -67,37 +67,37 @@ def fmt(v):
 
 
 def main() -> None:
-    mac_t, pi_t = targets(MAC_URL), targets(PI_URL)
-    all_targets = sorted(mac_t | pi_t)
+    local_t, remote_t = targets(LOCAL_URL), targets(REMOTE_URL)
+    all_targets = sorted(local_t | remote_t)
 
-    print(f"\nInternet monitor comparison — window={WINDOW}")
-    print(f"  Mac = {MAC_URL}   ({'reachable' if mac_t else 'NO DATA / unreachable'})")
-    print(f"  Pi  = {PI_URL}   ({'reachable' if pi_t else 'NO DATA / unreachable'})")
+    print(f"\nHome network monitor comparison — window={WINDOW}")
+    print(f"  Local  = {LOCAL_URL}   ({'reachable' if local_t else 'NO DATA / unreachable'})")
+    print(f"  Remote = {REMOTE_URL}   ({'reachable' if remote_t else 'NO DATA / unreachable'})")
     if not all_targets:
         print("\nNo data from either side. Are both stacks running?")
         return
 
     for t in all_targets:
         print(f"\n══ target: {t} ══")
-        print(f"  {'metric':<16}{'Mac':>9}{'Pi':>9}{'Δ(Pi-Mac)':>12}   verdict")
+        print(f"  {'metric':<16}{'Local':>9}{'Remote':>9}{'Δ(R-L)':>12}   verdict")
         print("  " + "-" * 58)
         for label, tmpl, lower_better in METRICS:
             expr = tmpl.format(t=t, w=WINDOW)
-            mac_v = q(MAC_URL, expr)
-            pi_v = q(PI_URL, expr)
-            if mac_v is None and pi_v is None:
+            local_v = q(LOCAL_URL, expr)
+            remote_v = q(REMOTE_URL, expr)
+            if local_v is None and remote_v is None:
                 continue
-            delta = (pi_v - mac_v) if (mac_v is not None and pi_v is not None) else None
+            delta = (remote_v - local_v) if (local_v is not None and remote_v is not None) else None
             verdict = ""
             if delta is not None and label not in ("samples",):
                 if abs(delta) < 1e-6:
                     verdict = "same"
                 elif lower_better:
-                    verdict = "Pi better" if delta < 0 else "Mac better"
+                    verdict = "Remote better" if delta < 0 else "Local better"
                 else:
-                    verdict = "Pi better" if delta > 0 else "Mac better"
+                    verdict = "Remote better" if delta > 0 else "Local better"
             d_str = "   n/a" if delta is None else f"{delta:+8.2f}"
-            print(f"  {label:<16}{fmt(mac_v):>9}{fmt(pi_v):>9}{d_str:>12}   {verdict}")
+            print(f"  {label:<16}{fmt(local_v):>9}{fmt(remote_v):>9}{d_str:>12}   {verdict}")
 
     # --- Connection quality: speed + bufferbloat (latest values) ---
     quality = [
@@ -110,23 +110,22 @@ def main() -> None:
         ("grade (5=A..1=F)", "internet_bufferbloat_grade", False),
     ]
     print("\n══ connection quality (latest speedtest/bufferbloat) ══")
-    print(f"  {'metric':<18}{'Mac':>9}{'Pi':>9}{'Δ(Pi-Mac)':>12}   verdict")
+    print(f"  {'metric':<18}{'Local':>9}{'Remote':>9}{'Δ(R-L)':>12}   verdict")
     print("  " + "-" * 60)
     for label, metric, lower_better in quality:
-        mac_v, pi_v = q(MAC_URL, metric), q(PI_URL, metric)
-        if mac_v is None and pi_v is None:
+        local_v, remote_v = q(LOCAL_URL, metric), q(REMOTE_URL, metric)
+        if local_v is None and remote_v is None:
             continue
-        delta = (pi_v - mac_v) if (mac_v is not None and pi_v is not None) else None
+        delta = (remote_v - local_v) if (local_v is not None and remote_v is not None) else None
         verdict = ""
         if delta is not None and abs(delta) > 1e-6:
-            verdict = ("Pi better" if delta < 0 else "Mac better") if lower_better else ("Pi better" if delta > 0 else "Mac better")
+            verdict = ("Remote better" if delta < 0 else "Local better") if lower_better else ("Remote better" if delta > 0 else "Local better")
         d_str = "   n/a" if delta is None else f"{delta:+8.2f}"
-        print(f"  {label:<18}{fmt(mac_v):>9}{fmt(pi_v):>9}{d_str:>12}   {verdict}")
+        print(f"  {label:<18}{fmt(local_v):>9}{fmt(remote_v):>9}{d_str:>12}   {verdict}")
 
     print(
-        "\nReading it: positive Δ on latency/loss/jitter/outages = Pi saw WORSE than Mac.\n"
-        "Speed/grade: higher = better. The Pi is on weak Wi-Fi, so expect it to look\n"
-        "worse until it's wired — then it becomes the trustworthy always-on reference.\n"
+        "\nReading it: positive Δ on latency/loss/jitter/outages = Remote saw WORSE than Local.\n"
+        "Speed/grade: higher = better.\n"
     )
 
 

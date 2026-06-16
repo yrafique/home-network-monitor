@@ -61,15 +61,17 @@ Five containers, one purpose — answer **when, how often, and how badly is my c
 git clone https://github.com/yrafique/home-network-monitor.git
 cd home-network-monitor
 cp .env.example .env        # edit targets, password, alerts
-./deploy.sh                 # syncs files → builds → starts → verifies
+PI_HOST=user@mypi.local ./deploy.sh   # syncs files → builds → starts → verifies
 ```
+
+`PI_HOST` defaults to `pi@raspberrypi.local`. Override it for any Linux host — Pi, NUC, VPS, old Mac mini, whatever is always on.
 
 | URL | What |
 |---|---|
-| `http://homebridge.local:3000` | Grafana dashboard |
-| `http://homebridge.local:8080` | Settings UI |
-| `http://homebridge.local:9090` | Prometheus |
-| `http://homebridge.local:8000/metrics` | Raw metrics |
+| `http://<host>:3000` | Grafana dashboard |
+| `http://<host>:8080` | Settings UI |
+| `http://<host>:9090` | Prometheus |
+| `http://<host>:8000/metrics` | Raw metrics |
 
 ### Run locally
 
@@ -186,10 +188,10 @@ Run the stack on both a laptop (Wi-Fi) and an always-on Pi (Ethernet), then diff
 
 ```bash
 python3 compare.py 24h
-python3 compare.py 6h http://laptop:9090 http://homebridge.local:9090
+python3 compare.py 6h http://localhost:9090 http://pi.local:9090
 ```
 
-If the **router** (`10.0.0.1`) looks clean on the Pi but noisy on the Mac at the same moment → the fault is your Wi-Fi, not the ISP.
+If the **router** (`10.0.0.1`) looks clean on the always-on host but noisy on your laptop at the same moment → the fault is your Wi-Fi, not the ISP.
 
 ---
 
@@ -233,20 +235,20 @@ home-network-monitor/
 ./deploy.sh --check                  # check Pi status, no deploy
 
 # Logs
-ssh pi@homebridge.local "docker logs hnm-monitor -f"
-ssh pi@homebridge.local "docker logs hnm-lanscan  -f"
+ssh user@mydevice.local "docker logs hnm-monitor -f"
+ssh user@mydevice.local "docker logs hnm-lanscan  -f"
 
 # Apply .env changes
-ssh pi@homebridge.local "cd /home/pi/home-network-monitor && docker compose up -d monitor"
+ssh user@mydevice.local "cd ~/home-network-monitor && docker compose up -d monitor"
 
 # Disk cleanup
-ssh pi@homebridge.local "docker image prune -af && docker builder prune -af"
+ssh user@mydevice.local "docker image prune -af && docker builder prune -af"
 
 # Stop (keep data)
-ssh pi@homebridge.local "cd /home/pi/home-network-monitor && docker compose down"
+ssh user@mydevice.local "cd ~/home-network-monitor && docker compose down"
 
 # Stop and wipe all stored metrics
-ssh pi@homebridge.local "cd /home/pi/home-network-monitor && docker compose down -v"
+ssh user@mydevice.local "cd ~/home-network-monitor && docker compose down -v"
 ```
 
 ---
