@@ -1,0 +1,101 @@
+groups:
+  # Rolling 6h z-score anomaly detection for RTT and jitter per target.
+  # Scale uses IQR/1.35 (robust to spikes) instead of stddev.
+  - name: internet_anomaly
+    interval: 30s
+    rules:
+      # --- latency baseline (6h rolling) ---
+      # NaN values (produced when PROBE_OK=0) do not contribute to
+      # avg_over_time or quantile_over_time in Prometheus — they are simply
+      # skipped — so mean6h and scale6h self-correct without extra guards.
+      - record: internet:ping_rtt:mean6h
+        expr: avg_over_time(internet_ping_rtt_avg_ms[6h])
+      - record: internet:ping_rtt:scale6h
+        expr: |
+          clamp_min(
+            (quantile_over_time(0.75, internet_ping_rtt_avg_ms[6h])
+              - quantile_over_time(0.25, internet_ping_rtt_avg_ms[6h])) / 1.35,
+            0.5)
+      # Preserved for historical continuity and dashboard reference only.
+      # Do NOT use as a divisor in z-score expressions — see comment above.
+      - record: internet:ping_rtt:stddev6h_raw
+        expr: stddev_over_time(internet_ping_rtt_avg_ms[6h])
+      # z-score using IQR-based robust scale.
+      # The "and on(target,owner) internet_probe_success > 0" guard drops
+      # the entire sample when the probe is down, preventing a z-score of
+      # 0 (= (NaN - mean) / scale collapses to NaN anyway, but explicit
+      # gating makes the intent clear and guards future arithmetic changes).
+      - record: internet:ping_rtt:zscore
+        expr: |
+          (
+            (internet_ping_rtt_avg_ms - internet:ping_rtt:mean6h)
+              / internet:ping_rtt:scale6h
+          ) and on(target, owner) (internet_probe_success > 0)
+
+      # --- jitter baseline (6h rolling) ---
+      - record: internet:ping_jitter:mean6h
+        expr: avg_over_time(internet_ping_jitter_ms[6h])
+      - record: internet:ping_jitter:scale6h
+        expr: |
+          clamp_min(
+            (quantile_over_time(0.75, internet_ping_jitter_ms[6h])
+              - quantile_over_time(0.25, internet_ping_jitter_ms[6h])) / 1.35,
+            0.5)
+      # Preserved for historical continuity and dashboard reference only.
+      - record: internet:ping_jitter:stddev6h_raw
+        expr: stddev_over_time(internet_ping_jitter_ms[6h])
+      - record: internet:ping_jitter:zscore
+        expr: |
+          (
+            (internet_ping_jitter_ms - internet:ping_jitter:mean6h)
+              / internet:ping_jitter:scale6h
+          ) and on(target, owner) (internet_probe_success > 0)
+
+  # Provider-divergence: all_down => ISP/link fault; partial_outage => single provider;
+  # latency_spread_ms => path-specific problem. LAN excluded from WAN outage signals.
+  - name: internet_divergence
+    interval: 30s
+    rules:
+      - record: internet:providers:up_count
+        expr: sum(internet_up)
+      - record: internet:providers:total
+        expr: count(internet_up)
+      - record: internet:providers:down_count
+        expr: count(internet_up) - sum(internet_up)
+      # 1 when EVERY WAN provider is down at once (ISP / link fault).
+      # LAN (owner="LAN") is excluded: in a real ISP outage the local gateway
+      # stays reachable, so including it would prevent all_down from ever firing.
+      - record: internet:all_down
+        expr: (sum(internet_up{owner!="LAN"}) == bool 0)
+      # 1 when some-but-not-all WAN providers are down (single-provider issue).
+      - record: internet:partial_outage
+        expr: |
+          (sum(internet_up{owner!="LAN"}) > bool 0)
+            * ((count(internet_up{owner!="LAN"}) - sum(internet_up{owner!="LAN"})) > bool 0)
+      # Spread of latency across providers that are currently up.
+      # Masking by probe_success prevents NaN from a single failed target from
+      # making the whole spread undefined (a real partial-failure case where
+      # spread is most diagnostic).
+      # "and" drops failed-probe series entirely before max/min, so a single
+      # down target doesn't propagate NaN through the aggregation.
+      - record: internet:latency_spread_ms
+        expr: |
+          max(internet_ping_rtt_avg_ms and on(target, owner) (internet_probe_success > 0))
+            - min(internet_ping_rtt_avg_ms and on(target, owner) (internet_probe_success > 0))
+
+  # Seasonal: ratio and deviation of live RTT vs. hour-of-week expectation.
+  # 1.0 = normal for this time slot; >1 = slower than seasonal baseline.
+  - name: internet_seasonal
+    interval: 30s
+    rules:
+      # ping metrics carry [target, owner] labels; the seasonal expectation
+      # has only `target`, so match on(target) and keep the ping side's
+      # labels via group_left(owner).
+      - record: internet:ping_rtt:seasonal_ratio
+        expr: |
+          internet_ping_rtt_avg_ms
+            / on(target) group_left(owner) internet_latency_seasonal_expected_ms
+      - record: internet:ping_rtt:seasonal_dev_ms
+        expr: |
+          internet_ping_rtt_avg_ms
+            - on(target) group_left(owner) internet_latency_seasonal_expected_ms

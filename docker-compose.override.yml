@@ -1,0 +1,8 @@
+# Mac-only overrides (not synced to the Pi, not committed).
+services:
+  monitor:
+    environment:
+      # Load test stopped on the Mac so its hourly speedtest can't saturate the
+      # shared uplink and pollute the Pi's measurements. Everything else (ping,
+      # DNS, HTTP, path, analyzer) keeps running on the Mac.
+      - LOADTEST_ENABLED=false

@@ -1,0 +1,4 @@
+prometheus-client==0.21.1
+python-nmap==0.7.1
+zeroconf==0.136.2
+defusedxml==0.7.1

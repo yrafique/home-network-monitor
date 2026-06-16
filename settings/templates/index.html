@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Internet Monitor — Settings</title>
+<style>
+  :root {
+    --bg:       #111217;
+    --surface:  #181b1f;
+    --card:     #1f2330;
+    --border:   #2c3145;
+    --text:     #d9dce3;
+    --muted:    #6c7293;
+    --blue:     #5794F2;
+    --green:    #73BF69;
+    --orange:   #FF9830;
+    --red:      #F2495C;
+    --yellow:   #FADE2A;
+    --purple:   #B877D9;
+    --radius:   8px;
+    --font:     'Inter', system-ui, -apple-system, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font);
+         font-size: 14px; line-height: 1.5; }
+
+  /* ── Layout ── */
+  .app { display: flex; min-height: 100vh; }
+  .sidebar { width: 220px; background: var(--surface); border-right: 1px solid var(--border);
+             padding: 24px 0; position: sticky; top: 0; height: 100vh; overflow-y: auto;
+             flex-shrink: 0; }
+  .main { flex: 1; padding: 32px; max-width: 820px; }
+
+  /* ── Sidebar ── */
+  .sidebar-logo { padding: 0 20px 24px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+  .sidebar-logo h1 { font-size: 15px; font-weight: 600; color: var(--text); }
+  .sidebar-logo p  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 20px;
+              cursor: pointer; color: var(--muted); font-size: 13px; border-radius: 0;
+              transition: background .15s, color .15s; border-left: 3px solid transparent; }
+  .nav-item:hover  { background: var(--card); color: var(--text); }
+  .nav-item.active { background: var(--card); color: var(--blue);
+                     border-left-color: var(--blue); }
+  .nav-icon { font-size: 15px; }
+
+  /* ── Status dots ── */
+  .status-section { padding: 16px 20px 0; border-top: 1px solid var(--border); margin-top: 12px; }
+  .status-section h3 { font-size: 10px; text-transform: uppercase; letter-spacing: .08em;
+                       color: var(--muted); margin-bottom: 10px; }
+  .status-row { display: flex; align-items: center; justify-content: space-between;
+                font-size: 12px; color: var(--muted); padding: 3px 0; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .dot.running { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .dot.exited  { background: var(--red);   box-shadow: 0 0 6px var(--red); }
+  .dot.unknown { background: var(--muted); }
+
+  /* ── Cards ── */
+  .section { margin-bottom: 32px; scroll-margin-top: 24px; }
+  .section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .section-icon { font-size: 18px; }
+  .section-title { font-size: 16px; font-weight: 600; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+          overflow: hidden; }
+  .setting-row { display: grid; grid-template-columns: 200px 1fr;
+                 align-items: start; padding: 14px 20px; gap: 16px;
+                 border-bottom: 1px solid var(--border); }
+  .setting-row:last-child { border-bottom: none; }
+  .setting-label { font-size: 13px; font-weight: 500; color: var(--text); padding-top: 7px; }
+  .setting-hint  { font-size: 11px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
+
+  /* ── Inputs ── */
+  input[type=text], input[type=number], input[type=password], select {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 5px;
+    color: var(--text); padding: 7px 10px; font-size: 13px; width: 100%;
+    outline: none; font-family: var(--font); transition: border-color .15s; }
+  input:focus, select:focus { border-color: var(--blue); }
+  .input-wrap { display: flex; align-items: center; gap: 8px; }
+  .unit { color: var(--muted); font-size: 12px; white-space: nowrap; }
+
+  /* ── Toggle ── */
+  .toggle-wrap { display: flex; align-items: center; gap: 10px; padding-top: 6px; }
+  .toggle { position: relative; width: 40px; height: 22px; cursor: pointer; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; inset: 0; background: var(--border);
+            border-radius: 22px; transition: background .2s; }
+  .slider::before { content: ''; position: absolute; left: 3px; top: 3px;
+                    width: 16px; height: 16px; background: #fff; border-radius: 50%;
+                    transition: transform .2s; }
+  input:checked + .slider { background: var(--blue); }
+  input:checked + .slider::before { transform: translateX(18px); }
+  .toggle-label { font-size: 13px; color: var(--muted); }
+
+  /* ── Tag input ── */
+  .tag-input-wrap { display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+                    background: var(--surface); border: 1px solid var(--border);
+                    border-radius: 5px; padding: 6px 8px; min-height: 38px;
+                    cursor: text; transition: border-color .15s; }
+  .tag-input-wrap:focus-within { border-color: var(--blue); }
+  .tag { display: flex; align-items: center; gap: 5px; background: var(--border);
+         border-radius: 4px; padding: 2px 8px; font-size: 12px; color: var(--text); }
+  .tag-remove { cursor: pointer; color: var(--muted); font-size: 14px; line-height: 1;
+                transition: color .15s; }
+  .tag-remove:hover { color: var(--red); }
+  .tag-ghost { border: none; outline: none; background: none; color: var(--text);
+               font-size: 13px; font-family: var(--font); min-width: 120px; flex: 1;
+               padding: 1px 2px; }
+  .tag-ghost::placeholder { color: var(--muted); }
+
+  /* ── Toolbar ── */
+  .toolbar { position: sticky; bottom: 0; background: var(--surface);
+             border-top: 1px solid var(--border); padding: 14px 32px;
+             display: flex; align-items: center; gap: 12px; z-index: 10; }
+  .btn { padding: 8px 20px; border-radius: 5px; font-size: 13px; font-weight: 500;
+         cursor: pointer; border: none; transition: opacity .15s, transform .1s;
+         font-family: var(--font); }
+  .btn:active { transform: scale(.97); }
+  .btn-primary { background: var(--blue); color: #fff; }
+  .btn-primary:hover { opacity: .88; }
+  .btn-secondary { background: var(--card); color: var(--text);
+                   border: 1px solid var(--border); }
+  .btn-secondary:hover { border-color: var(--blue); color: var(--blue); }
+  .btn-danger { background: transparent; color: var(--red);
+                border: 1px solid var(--red); }
+  .btn-danger:hover { background: var(--red); color: #fff; }
+  .save-status { margin-left: auto; font-size: 13px; color: var(--muted);
+                 display: flex; align-items: center; gap: 6px; }
+  .save-status.ok   { color: var(--green); }
+  .save-status.err  { color: var(--red); }
+
+  /* ── Toast ── */
+  #toast { position: fixed; bottom: 80px; right: 24px; background: var(--card);
+           border: 1px solid var(--border); border-radius: var(--radius);
+           padding: 12px 18px; font-size: 13px; color: var(--text);
+           box-shadow: 0 4px 20px rgba(0,0,0,.4); opacity: 0;
+           transform: translateY(8px); transition: all .25s; pointer-events: none;
+           max-width: 320px; z-index: 100; }
+  #toast.show { opacity: 1; transform: translateY(0); }
+  #toast.success { border-color: var(--green); color: var(--green); }
+  #toast.error   { border-color: var(--red);   color: var(--red); }
+
+  /* ── Misc ── */
+  .page-title { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .page-sub   { color: var(--muted); font-size: 13px; margin-bottom: 32px; }
+  select option { background: var(--card); }
+</style>
+</head>
+<body>
+<div class="app">
+
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <h1>⚡ Monitor Settings</h1>
+    <p>internet-monitor stack</p>
+  </div>
+  {% for sec in schema %}
+  <div class="nav-item" onclick="scrollTo('{{sec.id}}')" id="nav-{{sec.id}}">
+    <span class="nav-icon">{{sec.icon}}</span>
+    {{sec.title}}
+  </div>
+  {% endfor %}
+
+  <div class="status-section">
+    <h3>Services</h3>
+    {% for name, state in status.items() %}
+    <div class="status-row">
+      <span>{{name}}</span>
+      <div class="dot {% if state == 'running' %}running{% elif state == 'exited' %}exited{% else %}unknown{% endif %}"></div>
+    </div>
+    {% endfor %}
+  </div>
+</nav>
+
+<main class="main" id="main">
+  <div class="page-title">Settings</div>
+  <p class="page-sub">Changes are saved to <code>.env</code>. Affected services restart automatically when you click Save &amp; Apply.</p>
+
+  {% for sec in schema %}
+  <div class="section" id="sec-{{sec.id}}">
+    <div class="section-header">
+      <span class="section-icon">{{sec.icon}}</span>
+      <span class="section-title">{{sec.title}}</span>
+    </div>
+    <div class="card">
+      {% for s in sec.settings %}
+      <div class="setting-row">
+        <div>
+          <div class="setting-label">{{s.label}}</div>
+          {% if s.hint is defined %}
+          <div class="setting-hint">{{s.hint}}</div>
+          {% endif %}
+        </div>
+        <div>
+          {% set val = env.get(s.key, '') %}
+
+          {% if s.type == 'toggle' %}
+          <div class="toggle-wrap">
+            <label class="toggle">
+              <input type="checkbox" data-key="{{s.key}}" data-type="toggle"
+                     {% if val.lower() in ('true','1','yes','on') %}checked{% endif %}>
+              <span class="slider"></span>
+            </label>
+            <span class="toggle-label">{% if val.lower() in ('true','1','yes','on') %}Enabled{% else %}Disabled{% endif %}</span>
+          </div>
+
+          {% elif s.type == 'tags' %}
+          <div class="tag-input-wrap" id="tags-{{s.key}}" onclick="focusTagInput('{{s.key}}')">
+            {% for tag in val.split(',') if tag.strip() %}
+            <div class="tag">
+              <span>{{tag.strip()}}</span>
+              <span class="tag-remove" onclick="removeTag('{{s.key}}', this)">×</span>
+            </div>
+            {% endfor %}
+            <input class="tag-ghost" id="ghost-{{s.key}}" placeholder="Add, press Enter"
+                   data-key="{{s.key}}"
+                   onkeydown="handleTagKey(event, '{{s.key}}')">
+            <input type="hidden" id="val-{{s.key}}" data-key="{{s.key}}" data-type="tags"
+                   value="{{val}}">
+          </div>
+
+          {% elif s.type == 'number' %}
+          <div class="input-wrap">
+            <input type="number" data-key="{{s.key}}" data-type="number"
+                   value="{{val}}"
+                   {% if s.min is defined %}min="{{s.min}}"{% endif %}
+                   {% if s.max is defined %}max="{{s.max}}"{% endif %}
+                   {% if s.step is defined %}step="{{s.step}}"{% else %}step="1"{% endif %}>
+            {% if s.unit %}<span class="unit">{{s.unit}}</span>{% endif %}
+          </div>
+
+          {% elif s.type == 'select' %}
+          <select data-key="{{s.key}}" data-type="select">
+            {% for opt in s.options %}
+            <option value="{{opt}}" {% if val == opt %}selected{% endif %}>{{opt}}</option>
+            {% endfor %}
+          </select>
+
+          {% elif s.type == 'password' %}
+          <input type="password" data-key="{{s.key}}" data-type="text" value="{{val}}"
+                 autocomplete="new-password">
+
+          {% else %}
+          <input type="text" data-key="{{s.key}}" data-type="text" value="{{val}}">
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+
+  <div style="height: 80px;"></div>
+</main>
+</div>
+
+<div class="toolbar">
+  <button class="btn btn-primary" onclick="saveAndApply()">💾 Save &amp; Apply</button>
+  <button class="btn btn-secondary" onclick="saveOnly()">Save only</button>
+  <button class="btn btn-danger" onclick="restartAll()">↺ Restart all</button>
+  <div class="save-status" id="save-status"></div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+function focusTagInput(key) {
+  document.getElementById('ghost-' + key).focus();
+}
+
+function handleTagKey(e, key) {
+  const input = e.target;
+  const val = input.value.trim();
+  if ((e.key === 'Enter' || e.key === ',') && val) {
+    e.preventDefault();
+    addTag(key, val);
+    input.value = '';
+  } else if (e.key === 'Backspace' && !input.value) {
+    const wrap = document.getElementById('tags-' + key);
+    const tags = wrap.querySelectorAll('.tag');
+    if (tags.length) tags[tags.length - 1].remove();
+    syncTags(key);
+  }
+}
+
+function addTag(key, value) {
+  value.split(',').map(v => v.trim()).filter(Boolean).forEach(v => {
+    const wrap = document.getElementById('tags-' + key);
+    const tag = document.createElement('div');
+    tag.className = 'tag';
+    tag.innerHTML = `<span>${v}</span><span class="tag-remove" onclick="removeTag('${key}', this)">×</span>`;
+    wrap.insertBefore(tag, document.getElementById('ghost-' + key));
+  });
+  syncTags(key);
+}
+
+function removeTag(key, el) {
+  el.parentElement.remove();
+  syncTags(key);
+}
+
+function syncTags(key) {
+  const wrap = document.getElementById('tags-' + key);
+  const tags = [...wrap.querySelectorAll('.tag span:first-child')].map(s => s.textContent);
+  document.getElementById('val-' + key).value = tags.join(',');
+}
+
+document.querySelectorAll('[data-type=toggle]').forEach(cb => {
+  cb.addEventListener('change', () => {
+    cb.nextElementSibling.nextElementSibling.textContent =
+      cb.checked ? 'Enabled' : 'Disabled';
+  });
+});
+
+function collectSettings() {
+  const out = {};
+  document.querySelectorAll('[data-key]:not([data-type=toggle]):not([data-type=tags])').forEach(el => {
+    if (el.tagName === 'INPUT' || el.tagName === 'SELECT') {
+      out[el.dataset.key] = el.value;
+    }
+  });
+  document.querySelectorAll('[data-type=toggle]').forEach(cb => {
+    out[cb.dataset.key] = cb.checked ? 'true' : 'false';
+  });
+  document.querySelectorAll('[data-type=tags]').forEach(hidden => {
+    out[hidden.dataset.key] = hidden.value;
+  });
+  return out;
+}
+
+const RESTART_MAP = {{ schema | tojson }};
+function containersToRestart(settings) {
+  const changed = new Set(Object.keys(settings));
+  const containers = new Set();
+  RESTART_MAP.forEach(sec => {
+    sec.settings.forEach(s => {
+      if (changed.has(s.key) && s.restart) {
+        s.restart.forEach(c => containers.add(c));
+      }
+    });
+  });
+  return [...containers];
+}
+
+function setStatus(msg, cls) {
+  const el = document.getElementById('save-status');
+  el.textContent = msg; el.className = 'save-status ' + (cls || '');
+}
+
+function toast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'show ' + (type || '');
+  setTimeout(() => { t.className = ''; }, 3500);
+}
+
+async function saveOnly() {
+  const settings = collectSettings();
+  setStatus('Saving…');
+  const r = await fetch('/api/save', {
+    method: 'POST',
+    body: JSON.stringify({ settings, restart: [] }),
+    headers: { 'Content-Type': 'application/json' }
+  });
+  if (r.ok) { setStatus('Saved ✓', 'ok'); toast('Settings saved. Restart services to apply.', 'success'); }
+  else       { setStatus('Save failed', 'err'); toast('Save failed', 'error'); }
+}
+
+async function saveAndApply() {
+  const settings = collectSettings();
+  const restart = containersToRestart(settings);
+  setStatus('Saving & restarting…');
+  const r = await fetch('/api/save', {
+    method: 'POST',
+    body: JSON.stringify({ settings, restart }),
+    headers: { 'Content-Type': 'application/json' }
+  });
+  const data = await r.json();
+  if (r.ok) {
+    setStatus('Applied ✓', 'ok');
+    const summary = Object.entries(data.restarted || {}).map(([k,v]) => `${k}: ${v}`).join(', ');
+    toast('Saved & applied' + (summary ? ` — ${summary}` : ''), 'success');
+    setTimeout(() => location.reload(), 2000);
+  } else {
+    setStatus('Failed', 'err'); toast('Error applying settings', 'error');
+  }
+}
+
+async function restartAll() {
+  if (!confirm('Restart all monitoring services?')) return;
+  setStatus('Restarting…');
+  const r = await fetch('/api/restart', {
+    method: 'POST',
+    body: JSON.stringify({ containers: ['monitor','prometheus','lanscan','grafana'] }),
+    headers: { 'Content-Type': 'application/json' }
+  });
+  const data = await r.json();
+  setStatus('Done ✓', 'ok');
+  toast('Restarted: ' + Object.keys(data).join(', '), 'success');
+  setTimeout(() => location.reload(), 3000);
+}
+
+function scrollTo(id) {
+  document.getElementById('sec-' + id).scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      const id = e.target.id.replace('sec-', '');
+      const nav = document.getElementById('nav-' + id);
+      if (nav) nav.classList.add('active');
+    }
+  });
+}, { root: document.getElementById('main'), threshold: 0.3 });
+
+document.querySelectorAll('.section').forEach(s => observer.observe(s));
+</script>
+</body>
+</html>

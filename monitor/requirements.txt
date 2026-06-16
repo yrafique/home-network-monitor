@@ -1,0 +1,4 @@
+prometheus-client==0.21.1
+requests==2.32.3
+icmplib==3.0.4
+tzdata==2025.2
