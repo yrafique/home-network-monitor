@@ -8,6 +8,8 @@
 ![Grafana](https://img.shields.io/badge/Grafana-11.3-F46800?logo=grafana&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
+![Dashboard](docs/screenshots/dashboard-hero.png)
+
 ---
 
 ## What it measures
@@ -112,8 +114,12 @@ GRAFANA_PASSWORD=changeme
 ### Status row
 Live readings: UP/DOWN state, current latency, packet loss, range uptime %, latency min/avg/max. All stat panels respect the time picker — switch from 5 min to 30 days and every number updates.
 
+![Status row](docs/screenshots/status-row.png)
+
 ### Latency & packet loss
 Time series per target with mean/min/max in the legend table. The **Connection State Timeline** renders a green/red bar per target — red blocks mark exactly when you lost connectivity.
+
+![Latency panels](docs/screenshots/latency-panels.png)
 
 ### Per-hop path
 Every hop between you and the target with its own RTT and loss, auto-labelled by reverse-DNS and owner (LAN / Rogers / Google / …).
@@ -132,6 +138,8 @@ Hourly download/upload Mbps plus idle vs loaded latency. The **bufferbloat grade
 | D | 60 – 200 ms |
 | F | > 200 ms |
 
+![Speed](docs/screenshots/panel-speed.png)
+
 ### Advanced analytics
 
 **Anomaly z-score** — latency compared to each target's own rolling 6-hour baseline, scaled by an IQR-based estimator (spike-resistant). `|z| > 3` is a strong anomaly. Computed entirely in Prometheus recording rules — interpretable, not a black box.
@@ -141,6 +149,8 @@ Hourly download/upload Mbps plus idle vs loaded latency. The **bufferbloat grade
 - **One provider down** → that provider's issue, not yours
 
 **Seasonal baseline** — the monitor builds a median latency profile per hour-of-week from ~14 days of history. The dashboard shows actual vs expected, so normal patterns (evening congestion, maintenance windows) aren't flagged — only deviations *from that norm*. Appears after a few days of data.
+
+![Anomaly z-score](docs/screenshots/panel-anomaly.png)
 
 ---
 
@@ -154,6 +164,8 @@ Hourly download/upload Mbps plus idle vs loaded latency. The **bufferbloat grade
 4. **DHCP sniffer** — passively captures hostnames from DHCP requests (no traffic generated)
 
 Results appear in the **LAN Devices** table in Grafana: IP, MAC, vendor (OUI lookup), mDNS name, open ports, last-seen.
+
+![LAN devices](docs/screenshots/panel-lan-devices.png)
 
 ---
 
