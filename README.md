@@ -18,14 +18,14 @@ Five containers, one purpose — answer **when, how often, and how badly is my c
 
 | Signal | Method | Interval |
 |---|---|---|
-| Latency (min / avg / max / jitter) | ICMP ping, 10 packets per probe | 30 s |
-| Packet loss | ICMP ping | 30 s |
-| DNS resolution time | `getaddrinfo` | 30 s |
-| HTTP reachability + response time | HTTP GET | 30 s |
-| Per-hop path latency & loss | traceroute (raw ICMP) | 60 s |
+| Latency (min / avg / max / jitter) | ICMP ping, 10 packets per probe | 10 min |
+| Packet loss | ICMP ping | 10 min |
+| DNS resolution time | `getaddrinfo` | 10 min |
+| HTTP reachability + response time | HTTP GET | 10 min |
+| Per-hop path latency & loss | traceroute (raw ICMP) | 10 min |
 | Download / upload speed | Ookla Speedtest CLI | 1 h |
 | Bufferbloat grade (A – F) | Latency delta under full load | 1 h |
-| LAN devices (IP, MAC, vendor, ports) | nmap + mDNS + SSDP + DHCP | 5 min |
+| LAN devices (IP, MAC, vendor, ports) | nmap + mDNS + SSDP + DHCP | 10 min |
 | Outage events | Up/down transition log | real-time |
 
 ---
@@ -89,7 +89,7 @@ The override file disables the hourly speedtest on Mac so it doesn't saturate yo
 ## Configuration
 
 ```bash
-# Who to ping every 30 s — add your router IP to distinguish ISP vs local faults
+# Who to ping every 10 min — add your router IP to distinguish ISP vs local faults
 PING_TARGETS=10.0.0.1,8.8.8.8,1.1.1.1,google.com
 
 # Hourly speedtest (uses real bandwidth — disable on metered links)
@@ -156,7 +156,7 @@ Hourly download/upload Mbps plus idle vs loaded latency. The **bufferbloat grade
 
 ## LAN device scanner
 
-`hnm-lanscan` discovers every device on your network every 5 minutes using four complementary techniques:
+`hnm-lanscan` discovers every device on your network every 10 minutes using four complementary techniques:
 
 1. **nmap** — TCP/UDP port scan, OS fingerprint, service detection
 2. **mDNS** — Apple devices, Sonos, printers, smart home by name
